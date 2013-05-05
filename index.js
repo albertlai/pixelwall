@@ -18,8 +18,6 @@ var RedisStore = require('socket.io/lib/stores/redis')
 var m = 14;
 var n = 9;
 
-console.log(m * n);
-
 io.set('store', new RedisStore({
     redisPub : pub, 
     redisSub : sub, 
