@@ -3,8 +3,31 @@
 <head>
 <style>
 
+.radial {
+  /* fallback */
+  background-color: #1F1717;
+
+  /* Safari 4-5, Chrome 1-9 */
+  background: -webkit-gradient(radial, 50% 50%, 0, 50% 50%, 100, from(#1F1717), to(#444444));
+
+  /* Safari 5.1+, Chrome 10+ */
+  background: -webkit-radial-gradient(50% 50%, closest-corner, #1F1717, #444444);
+
+  /* Firefox 3.6+ */
+  background: -moz-radial-gradient(50% 50%, closest-corner, #1F1717, #444444);
+
+  /* IE 10 */
+  background: -ms-radial-gradient(50% 50%, closest-corner, #1F1717, #444444);
+
+  /* Opera cannot do radial gradients yet */
+}
+
 body {
   font-family: Roboto;
+}
+
+#header {
+  height: 6em;
 }
 
 h2 {
@@ -43,13 +66,12 @@ h2 {
   border-radius: 50%;
   width: <%= diameter %>%;
   height: <%= diameter %>%;
-//  margin-left: <%= d_n %>%;
-  background-color: #EEEEEE;
+  background-color: #AAAAAA;
   float:left;
 }
 
 .bulb:hover {
-  background-color: #CCCCCC;
+  background-color: #888888;
 }
 
 .lit {
@@ -68,9 +90,18 @@ h2 {
   margin-left: <%= (d_n + diameter) / 2%>%;
 }
 
+.attribution {
+  text-align: center;
+  color: #888888;
+  border-style: solid;
+  border-width: 2px 0 0 0;
+  border-color: #555555;
+}
+
 </style>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/static/fn.js"></script>
 <script>
 
   var initial_state = [<%= initial_state %>];
@@ -85,14 +116,6 @@ h2 {
   socket.on('update', function (data) {
     setState(data);
   });
-
-  function map(arr1, arr2, fn) {
-    var result = new Array(arr1.length);
-    for (var i = 0; i < arr1.length; i++) {
-      result[i] = fn(arr1[i], arr2[i]);
-    }
-    return result;
-  }
 
   function tap(e) {
     var lit = e.classList.contains('lit');
@@ -151,9 +174,11 @@ h2 {
 </script>
 
 </head>
-<body>
-  <h2> HELLO </h2>
+<body class="radial">
 
+<div id="header">
+
+</div>
 <div id="main_column">
   <div id="container">
     <div id="dummy"></div>
@@ -168,11 +193,12 @@ h2 {
   </div>
 </div>
 
-<script>
 
-setState(initial_state);
-
-</script>
+<div class="attribution"> 
+  inspired by: <a href="http://www.purincess.com/experiments/tap-tap-animation/"> Tap Tap Animation</a> - Purin Phanichphant
+  <br />
+  githup repo <a href="https://github.com/albertlai/pixelwall">here</a> 
+</div>
 
 </body>
 

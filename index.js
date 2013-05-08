@@ -3,6 +3,7 @@ var server = require('http').createServer(app);
 var cluster = require('cluster');
 var io = require('socket.io').listen(server);
 var ejs = require('ejs');
+var fn = require('./static/fn');
 
 var RedisStore = require('socket.io/lib/stores/redis')
 , redis  = require('socket.io/node_modules/redis')
@@ -10,14 +11,14 @@ var RedisStore = require('socket.io/lib/stores/redis')
 , sub    = redis.createClient()
 , client = redis.createClient();
 
-/*     n
-     o o o
-  m   o o
-     o o o     
+/*      n
+     o o o o
+  m   o o o
+     o o o o    
 */
-var m = 14;
-var n = 9;
+var m = 24,  n = 12;
 
+// Setup redis
 io.set('store', new RedisStore({
     redisPub : pub, 
     redisSub : sub, 
@@ -28,17 +29,20 @@ client.on('error', function (err) {
     console.log("Error " + err);
 });
 
-client.flushdb();
+function getZeroedState() {
+    var arr = [];
+    var len = Math.ceil(m * n / 32);
+    for (var i = 0; i < len; i++) {
+        arr.push(0);
+    }
+    return arr;
+}
 
 // Initialize
+client.flushdb();
 client.get('state', function (err, obj) {
-    if (!obj) {
-        var arr = [];
-        var len = Math.ceil(m * n / 32);
-        for (var i = 0; i < len; i++) {
-            arr.push(0);
-        }
-        client.set('state', arr);
+    if (!obj) {        
+        client.set('state', getZeroedState());
     }
 });
 
@@ -56,67 +60,61 @@ if (cluster.isMaster) {
 } else {    
     app.engine('html', ejs.renderFile);
     console.log('forked');
+
+    // Serve static file
+    io.static.add('/static/fn.js', {
+	    mime: {
+		type: 'application/javascript',
+                encoding: 'utf8',
+                gzip: true
+            },
+            file: __dirname + '/static/fn.js'
+    }); 
+
     server.listen(8080);
 
-    var w = 5;
-    var d_100 = (100 - w) / n;
-    var d_010 = d_100 / Math.sqrt(3);
-    var d_m = d_010 / 2;
-    var d_n = d_100;    
+    // Setup the values for lattice coordinates (in miller indices)
+    var w = 4;
+    var d_10 = (100 - w) / n;
+    var d_01 = d_10 / Math.sqrt(3);
+    var d_m = d_01 / 2;
+    var d_n = d_10;    
 
     function get(req, res) {
-        var render = function (err, initial_state) {
-            var context = {
-                m: m,
-                n: n, 
-                diameter: w,
-                d_m: d_m,
-                d_n: d_n,
-                initial_state: initial_state
-            };
-            res.render('index.html', context);   
-        }
-        client.get('state', render);
+        var context = {
+            m: m,
+            n: n, 
+            diameter: w,
+            d_m: d_m,
+            d_n: d_n,
+            initial_state: getZeroedState()
+        };
+        res.render('index.html', context);   
     };   
-    
-    function map2(arr1, arr2, fn) {
-        for (var i = 0; i < arr1.length; i++) {
-            arr1[i] = fn(arr1[i], arr2[i]);
-        }
-    }
 
-    function map(arr, fn) {
-        for (var i = 0; i < arr.length; i++) {
-            arr[i] = fn(arr[i]);
-        }        
-    }
-    
-    function accumulate(arr, fn) {
-        var n = arr[0];
-        if (arr.length > 1) {
-            for (var i = 1; i < arr.length; i++) {
-                n = fn(arr[i], n);
-            }
-        }
-        return n;
-    }
-
-    function and(a, b) { return parseInt(a) & b; };
-    function or(a, b) { return parseInt(a) | b; };
-    
+    // Update the state with data from client. Data comes in with the form:
+    //    0 | (1 << index) if we are lighting up a circle (eg 01000000)
+    // or   
+    //    ~ (0 | 1 << index) if we are dimming a circle (eg 11111011)
     function tap(data) {
-        var light = accumulate(data, and) == 0;
+        var light = fn.accumulate(data, fn.and) == 0;
         var process = function (err, state) {
             state = state.split(',');
-            map2 (state, data, light ? or : and);        
+            // If it is lighting up, we simply || with the state
+            // If it is dimming, we simply && with the state
+            state = fn.map(state, data, light ? fn.or : fn.and);        
             io.sockets.emit('update', state);
-            client.set('state', state, redis.print);
+            client.set('state', state);
         };        
         client.get('state', process);
     }
 
     app.get('/', get);   
     io.on('connection', function (socket) {
-        socket.on('tap', tap);
+        socket.on('tap', tap);       
+        client.get('state', function(err, state) {
+            state = state.split(',');
+            socket.emit('update', state);
+        });
     });
 }
