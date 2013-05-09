@@ -3,6 +3,11 @@
 <head>
 <style>
 
+@font-face {
+  font-family: Museo;
+  src: url('static/Museo_Slab_500.otf') format('opentype');
+}
+
 .radial {
   /* fallback */
   background-color: #1F1717;
@@ -23,22 +28,20 @@
 }
 
 body {
-  font-family: Roboto;
+  font-family: Museo;//, Gill Sans;
 }
 
-#header {
-  height: 6em;
+a {
+  color: #F8DF90;
+  text-decoration: none;
 }
 
-h2 {
-  text-align: center;
-  font-size: 3em;
-  color: #777777;
+a:hover {
+  color: <%= light %>;
 }
 
 #main_column {
-  margin-left: auto;
-  margin-right: auto;
+  margin: 2em auto;
   width: 80%;
 }
 
@@ -46,11 +49,11 @@ h2 {
   display: inline-block;
   position: relative;
   width: 100%;
-  min-width:500px;
+  min-width:320px; // iPhone
 }
 
 #dummy {
-  padding-top: 100%%;
+  padding-top: <%= height %>%;
 }
 
 #grid {
@@ -61,12 +64,34 @@ h2 {
   bottom: 0;
 }
 
+@keyframes light {
+  from { background-color: <%= dim %>; }
+  to { background-color: <%= light %>; }
+}
+
+/* Safari and Chrome */
+@-webkit-keyframes light {
+  from { background-color: <%= dim %>; }
+  to { background-color: <%= light %>; }
+}
+
+@keyframes dim {
+  from { background-color: <%= light %>; }
+  to { background-color: <%= dim %>; }
+}
+
+/* Safari and Chrome */
+@-webkit-keyframes dim {
+  from { background-color: <%= light %>; }
+  to { background-color: <%= dim %>; }
+}
+
 .bulb {
   position: absolute;
   border-radius: 50%;
-  width: <%= diameter %>%;
-  height: <%= diameter %>%;
-  background-color: #AAAAAA;
+  width: <%= w %>%;
+  height: <%= h %>%;
+  background-color: <%= dim %>;
   float:left;
 }
 
@@ -75,6 +100,8 @@ h2 {
 }
 
 .lit {
+  animation: light .25s;  
+  -webkit-animation: light .25s;  
   background-color: #FFD649;
 }
 
@@ -82,26 +109,33 @@ h2 {
   background-color: #F8DF90;
 }
 
+.dim {
+  animation: dim .25s;
+  -webkit-animation: dim .25s;
+}
+
 .first {
   margin-left: 0%;
 }
 
-.first_odd {
-  margin-left: <%= (d_n + diameter) / 2%>%;
+v.first_odd {
+  margin-left: <%= (d_n + w) / 2%>%;
 }
 
 .attribution {
   text-align: center;
+  font-size: .7em;
   color: #888888;
   border-style: solid;
   border-width: 2px 0 0 0;
   border-color: #555555;
+  padding: 1em 0;
 }
 
 </style>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/socket.io/static/fn.js"></script>
+<script src="/static/fn.js"></script>
 <script>
 
   var initial_state = [<%= initial_state %>];
@@ -128,8 +162,10 @@ h2 {
       val = ~val;
       filler = ~0;
       e.classList.remove('lit');
+      e.classList.add('dim');
     } else {
       e.classList.add('lit');
+      e.classList.remove('dim');
     }    
     
     var delta = [];
@@ -157,7 +193,9 @@ h2 {
         dim = new_dim & 1 == 1;
         if (lit) {
          document.getElementById('bulb_' + id).classList.add('lit');
+         document.getElementById('bulb_' + id).classList.remove('dim');
         } else if (dim) {
+         document.getElementById('bulb_' + id).classList.add('dim');
          document.getElementById('bulb_' + id).classList.remove('lit');
         }
 
@@ -176,8 +214,6 @@ h2 {
 </head>
 <body class="radial">
 
-<div id="header">
-
 </div>
 <div id="main_column">
   <div id="container">
@@ -185,7 +221,10 @@ h2 {
     <div id="grid">
       <% for(var i=0; i< m; i++) {%>
            <% for(var j=0; j < n - (i % 2); j++) {%>
-              <div class="bulb<% if (j == 0) {%> first<% }  %><% if (j == 0 && (i % 2) == 1) {%> first_odd<% } %>" id="bulb_<%= n * i + j - (i - i % 2)/ 2%>" onclick="tap(this);"  style="margin-top:<%= d_m * i%>%; margin-left:<%= d_n * j + (((i % 2) == 1) ? (d_n / 2) : 0)%>%" > 
+              <div id="bulb_<%= n * i + j - (i - i % 2)/ 2%>" 
+                   class="bulb<% if (j == 0) {%> first<% }  %><% if (j == 0 && (i % 2) == 1) {%> first_odd<% } %>" 
+                   style="margin-top:<%= d_m * i%>%; margin-left:<%= d_n * j + (((i % 2) == 1) ? (d_n / 2) : 0)%>%"
+                   onclick="tap(this);" >
               </div>
               <% } %>
          <% } %>
@@ -195,9 +234,9 @@ h2 {
 
 
 <div class="attribution"> 
-  inspired by: <a href="http://www.purincess.com/experiments/tap-tap-animation/"> Tap Tap Animation</a> - Purin Phanichphant
+  Inspired by the<a href="http://www.purincess.com/experiments/tap-tap-animation/"> Tap Tap Animation</a> art installation from Purin Phanichphant
   <br />
-  githup repo <a href="https://github.com/albertlai/pixelwall">here</a> 
+  Source on <a href="https://github.com/albertlai/pixelwall">github</a> 
 </div>
 
 </body>

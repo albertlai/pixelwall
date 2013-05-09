@@ -1,4 +1,5 @@
-var app = require('express')();
+var express = require('express');
+var app = express();
 var server = require('http').createServer(app);
 var cluster = require('cluster');
 var io = require('socket.io').listen(server);
@@ -20,9 +21,9 @@ var m = 24,  n = 12;
 
 // Setup redis
 io.set('store', new RedisStore({
-    redisPub : pub, 
-    redisSub : sub, 
-    redisClient : client
+            redisPub : pub, 
+            redisSub : sub, 
+            redisClient : client
 }));
 
 client.on('error', function (err) {
@@ -37,16 +38,17 @@ function getZeroedState() {
     }
     return arr;
 }
-
-// Initialize
-client.flushdb();
-client.get('state', function (err, obj) {
-    if (!obj) {        
-        client.set('state', getZeroedState());
-    }
-});
+    
 
 if (cluster.isMaster) {
+    // Initialize
+    client.flushdb();
+    client.get('state', function (err, obj) {
+       if (!obj) {        
+           client.set('state', getZeroedState());
+       }
+    });
+    
     // Fork workers.
     var numCPUs = require('os').cpus().length;
     for (var i = 0; i < numCPUs; i++) {
@@ -62,40 +64,43 @@ if (cluster.isMaster) {
     console.log('forked');
 
     // Serve static file
-    io.static.add('/static/fn.js', {
-	    mime: {
-		type: 'application/javascript',
-                encoding: 'utf8',
-                gzip: true
-            },
-            file: __dirname + '/static/fn.js'
-    }); 
-
+    app.use('/static', express.static( __dirname + '/static'));
     server.listen(8080);
 
     // Setup the values for lattice coordinates (in miller indices)
+    // All units are in % of the total width of the lattice
     var w = 4;
-    var d_10 = (100 - w) / n;
+    var d_10 = (100 - w) / (n-1);
     var d_01 = d_10 / Math.sqrt(3);
     var d_m = d_01 / 2;
     var d_n = d_10;    
+    var height = m * d_m + w / 2;
+    var h = w * 100 / height;
+
+    // Colors
+    var dim = "#A4A49F";
+    var light = "#FFD659";
 
     function get(req, res) {
         var context = {
+            initial_state: getZeroedState(),
+            height: height,
             m: m,
             n: n, 
-            diameter: w,
+            w: w,
+            h: h,
             d_m: d_m,
             d_n: d_n,
-            initial_state: getZeroedState()
+            dim: dim,
+            light: light
         };
         res.render('index.html', context);   
     };   
 
     // Update the state with data from client. Data comes in with the form:
-    //    0 | (1 << index) if we are lighting up a circle (eg 01000000)
+    //       0 | (1 << index) if we are lighting up a circle (eg 01000000)
     // or   
-    //    ~ (0 | 1 << index) if we are dimming a circle (eg 11111011)
+    //    ~ (0 | (1 << index)) if we are dimming a circle (eg 11111011)
     function tap(data) {
         var light = fn.accumulate(data, fn.and) == 0;
         var process = function (err, state) {
