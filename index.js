@@ -12,13 +12,6 @@ var RedisStore = require('socket.io/lib/stores/redis')
 , sub    = redis.createClient()
 , client = redis.createClient();
 
-/*      n
-     o o o o
-  m   o o o
-     o o o o    
-*/
-var m = 24,  n = 12;
-
 // Setup redis
 io.set('store', new RedisStore({
             redisPub : pub, 
@@ -30,6 +23,14 @@ client.on('error', function (err) {
     console.log("Error " + err);
 });
 
+
+/*      n
+     o o o o
+  m   o o o
+     o o o o    
+*/
+var m = 24,  n = 12;
+
 function getZeroedState() {
     var arr = [];
     var len = Math.ceil(m * n / 32);
@@ -39,10 +40,8 @@ function getZeroedState() {
     return arr;
 }
     
-
 if (cluster.isMaster) {
     // Initialize
-    client.flushdb();
     client.get('state', function (err, obj) {
        if (!obj) {        
            client.set('state', getZeroedState());
@@ -60,12 +59,7 @@ if (cluster.isMaster) {
     });
 
 } else {    
-    app.engine('html', ejs.renderFile);
     console.log('forked');
-
-    // Serve static file
-    app.use('/static', express.static( __dirname + '/static'));
-    server.listen(8080);
 
     // Setup the values for lattice coordinates (in miller indices)
     // All units are in % of the total width of the lattice
@@ -75,7 +69,10 @@ if (cluster.isMaster) {
     var d_m = d_01 / 2;
     var d_n = d_10;    
     var height = m * d_m + w / 2;
-    var h = w * 100 / height;
+
+    // rescale to be a % of height
+    d_m = d_m * 100 / height; 
+    var h = w * 100 / height; 
 
     // Colors
     var dim = "#A4A49F";
@@ -102,19 +99,21 @@ if (cluster.isMaster) {
     // or   
     //    ~ (0 | (1 << index)) if we are dimming a circle (eg 11111011)
     function tap(data) {
+        console.log('tap: ' + data);
         var light = fn.accumulate(data, fn.and) == 0;
         var process = function (err, state) {
             state = state.split(',');
             // If it is lighting up, we simply || with the state
             // If it is dimming, we simply && with the state
             state = fn.map(state, data, light ? fn.or : fn.and);        
+            console.log('state: ' + state);
             io.sockets.emit('update', state);
             client.set('state', state);
-        };        
+        };
         client.get('state', process);
     }
 
-    app.get('/', get);   
+
     io.on('connection', function (socket) {
         socket.on('tap', tap);       
         client.get('state', function(err, state) {
@@ -122,4 +121,10 @@ if (cluster.isMaster) {
             socket.emit('update', state);
         });
     });
+
+    app.engine('html', ejs.renderFile);
+    app.use('/static', express.static( __dirname + '/static'));
+    app.get('/', get);   
+
+    server.listen(8080);
 }

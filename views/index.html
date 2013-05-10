@@ -28,7 +28,7 @@
 }
 
 body {
-  font-family: Museo;//, Gill Sans;
+  font-family: Museo, Gill Sans;
 }
 
 a {
@@ -192,11 +192,13 @@ v.first_odd {
         lit = new_lit & 1 == 1;      
         dim = new_dim & 1 == 1;
         if (lit) {
-         document.getElementById('bulb_' + id).classList.add('lit');
-         document.getElementById('bulb_' + id).classList.remove('dim');
+         var el = document.getElementById('bulb_' + id);
+         el.classList.add('lit');
+         el.classList.remove('dim');
         } else if (dim) {
-         document.getElementById('bulb_' + id).classList.add('dim');
-         document.getElementById('bulb_' + id).classList.remove('lit');
+         var el = document.getElementById('bulb_' + id);
+         el.classList.add('dim');
+         el.classList.remove('lit');
         }
 
         i++;      
@@ -223,7 +225,7 @@ v.first_odd {
            <% for(var j=0; j < n - (i % 2); j++) {%>
               <div id="bulb_<%= n * i + j - (i - i % 2)/ 2%>" 
                    class="bulb<% if (j == 0) {%> first<% }  %><% if (j == 0 && (i % 2) == 1) {%> first_odd<% } %>" 
-                   style="margin-top:<%= d_m * i%>%; margin-left:<%= d_n * j + (((i % 2) == 1) ? (d_n / 2) : 0)%>%"
+                   style="top:<%= d_m * i%>%; left:<%= d_n * j + (((i % 2) == 1) ? (d_n / 2) : 0)%>%"
                    onclick="tap(this);" >
               </div>
               <% } %>
