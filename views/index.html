@@ -147,7 +147,7 @@ v.first_odd {
 
   var url = window.location.protocol + "//" + window.location.host;
   var socket = io.connect(url);
-  socket.on('update', function (data) {
+  socket.on('pixelwall_update', function (data) {
     setState(data);
   });
 
@@ -173,7 +173,7 @@ v.first_odd {
       delta.push(filler);
     }
     delta[index] = val;
-    socket.emit('tap', delta);
+    socket.emit('pixelwall_tap', delta);
   }                  
 
   function setState(new_state) {
