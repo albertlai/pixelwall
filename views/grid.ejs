@@ -1,0 +1,145 @@
+<style>
+@keyframes light {
+  from { background-color: <%= dim %>; }
+  to { background-color: <%= light %>; }
+}
+
+/* Safari and Chrome */
+@-webkit-keyframes light {
+  from { background-color: <%= dim %>; }
+  to { background-color: <%= light %>; }
+}
+
+@keyframes dim {
+  from { background-color: <%= light %>; }
+  to { background-color: <%= dim %>; }
+}
+
+/* Safari and Chrome */
+@-webkit-keyframes dim {
+  from { background-color: <%= light %>; }
+  to { background-color: <%= dim %>; }
+}
+
+.bulb {
+  position: absolute;
+  border-radius: 50%;
+  width: <%= w %>%;
+  height: <%= h %>%;
+  background-color: <%= dim %>;
+  float:left;
+}
+
+.bulb:hover {
+  background-color: #888888;
+}
+
+.lit {
+  animation: light .25s;  
+  -webkit-animation: light .25s;  
+  background-color: #FFD649;
+}
+
+.lit:hover {
+  background-color: #F8DF90;
+}
+
+.dim {
+  animation: dim .25s;
+  -webkit-animation: dim .25s;
+}
+
+.first {
+  margin-left: 0%;
+}
+
+
+</style>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/static/fn.js"></script>
+<script>
+  var initial_state = [<%= initial_state %>];
+  var state = [];
+  for (var i = 0; i < initial_state.length; i++) {
+    state.push(0);
+  }
+  var base = 32;
+
+  var url = window.location.protocol + "//" + window.location.host;
+  var socket = io.connect(url);
+  socket.on('pixelwall_update', function (data) {
+    setState(data);
+  });
+
+  function tap(e) {
+    var lit = e.classList.contains('lit');
+    var id = e.id.substring(5);
+
+    var index = Math.floor (id / base);
+    var val = 1 << parseInt(id % base);
+    var filler = 0;
+    if (lit) {
+      val = ~val;
+      filler = ~0;
+      e.classList.remove('lit');
+      e.classList.add('dim');
+    } else {
+      e.classList.add('lit');
+      e.classList.remove('dim');
+    }    
+    
+    var delta = [];
+    for (var i = 0; i < state.length; i++) {
+      delta.push(filler);
+    }
+    delta[index] = val;
+    socket.emit('pixelwall_tap', delta);
+  }                  
+
+  function setState(new_state) {
+    var mask = map(new_state, state, function (a, b) { return  a ^ b; });
+    var new_list_arr = map(new_state, mask, function (a, b) { return a & b; });
+    var new_dim_arr = map(new_state, mask, function (a, b) { return ~a & b; });
+
+    var new_lit, new_dime, id, i = 0;
+    var lit = false;
+    for (var n = 0; n < state.length; n++) {
+      new_lit = new_list_arr[n] >>> 0;
+      new_dim = new_dim_arr[n] >>> 0;                  
+      i = 0;
+      while (new_lit > 0 || new_dim > 0) {
+        id = n * base + i;
+        lit = new_lit & 1 == 1;      
+        dim = new_dim & 1 == 1;
+        if (lit) {
+          var el = document.getElementById('bulb_' + id);
+          el.classList.add('lit');
+          el.classList.remove('dim');
+        } else if (dim) {
+          var el = document.getElementById('bulb_' + id);
+          el.classList.add('dim');
+          el.classList.remove('lit');
+        }
+
+        i++;      
+        new_lit = new_lit >>> 1;
+        new_dim = new_dim >>> 1;
+      }
+    }
+
+    state = new_state;
+  }  
+</script>
+
+<div id="grid">
+<% for(var i=0; i< m; i++) {%>
+    <% for(var j=0; j < n - (i % 2); j++) {%>
+        <div id="bulb_<%= n * i + j - (i - i % 2)/ 2%>" 
+               class="bulb<% if (j == 0) {%> first<% }  %><% if (j == 0 && (i % 2) == 1) {%> first_odd<% } %>" 
+               style="top:<%= d_m * i%>%; left:<%= d_n * j + (((i % 2) == 1) ? (d_n / 2) : 0)%>%"
+               onclick="tap(this);" >
+        </div>
+    <% } %>
+<% } %>
+</div>

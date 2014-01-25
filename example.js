@@ -9,9 +9,9 @@ var RedisStore = require('socket.io/lib/stores/redis');
 var redis  = require('socket.io/node_modules/redis');
 var pub    = redis.createClient();
 var sub    = redis.createClient();
-var client = redis.createClient();
+var redisclient = redis.createClient();
 
-client.on('error', function (err) {
+redisclient.on('error', function (err) {
     console.log("Redis Error " + err);
 });
     
@@ -20,14 +20,14 @@ io.set('log level', 1);
 io.set('store', new RedisStore({
             redisPub : pub, 
             redisSub : sub, 
-            redisClient : client
+            redisClient : redisclient
 }));
 
 // TODO: log to S3 and playback
 
 if (cluster.isMaster) { 
-    pixelwall.initialize(client);
-    client.set('num_connections', 0);
+    pixelwall.initialize(redisclient);
+    redisclient.set('num_connections', 0);
     // Fork workers.
     var numCPUs = require('os').cpus().length;
     for (var i = 0; i < numCPUs; i++) {
@@ -43,19 +43,20 @@ if (cluster.isMaster) {
         context = pixelwall.getContext();
         res.render('index.html', context);   
     };   
+
     app.engine('html', require('ejs').renderFile);
     app.use('/static', express.static( __dirname + '/static'));
     app.get('/', get);   
     
     var conn_count = 0;
-    io.on('connection', pixelwall.onConnection(client, io, function(socket) {
+    io.on('connection', pixelwall.onConnection(redisclient, io, function(socket) {
             conn_count++;
-            client.incr('num_connections');
+            redisclient.incr('num_connections');
             socket.on('disconnect', function(socket) {
-                    client.decr('num_connections');
+                    redisclient.decr('num_connections');
             });
                 
     }));
 
-    server.listen(8080);
+    server.listen(8081);
 }
