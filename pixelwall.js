@@ -6,7 +6,7 @@ var fn = require('./static/fn');
   m   o o o
      o o o o    
 */
-var m = 24,  n = 12;
+var m = 17,  n = 3;
 var STATE = 'pixelwall::state';
 
 function getZeroedState() {
@@ -30,7 +30,7 @@ function initialize(redisclient) {
 
 // Setup the values for lattice coordinates (in miller indices)
 // All units are in % of the total width of the lattice
-var w = 4;
+var w = 16;
 var d_10 = (100 - w) / (n-1);
 var d_01 = d_10 / Math.sqrt(3);
 var d_m = d_01 / 2;
