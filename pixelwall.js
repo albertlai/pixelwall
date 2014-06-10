@@ -6,10 +6,12 @@ var fn = require('./static/fn');
   m   o o o
      o o o o    
 */
-var m = 17,  n = 3;
+function Pixelwall(m, n) {
+
+var pixelwall = {};
 var STATE = 'pixelwall::state';
 
-function getZeroedState() {
+var getZeroedState = function() {
     var arr = [];
     var len = Math.ceil(m * n / 32);
     for (var i = 0; i < len; i++) {
@@ -19,7 +21,7 @@ function getZeroedState() {
 }
 
 // Initialize the database
-function initialize(redisclient) {
+pixelwall.initialize = function (redisclient) {
     // Initialize
     redisclient.get(STATE, function (err, obj) {
         if (!obj) {        
@@ -44,7 +46,7 @@ var h = w * 100 / height;
 var dim = "#A4A49F";
 var light = "#FFD659";
 
-function getContext() {
+pixelwall.getContext = function () {
     var context = {
         initial_state: getZeroedState(),
         height: height,
@@ -60,7 +62,7 @@ function getContext() {
     return context;
 };   
 
-function getTap(redisclient, io) {    
+var getTap = function(redisclient, io) {    
     // Update the state with data from client. Data comes in with the form:
     //       0 | (1 << index) if we are lighting up a circle (eg 01000000)
     // or   
@@ -84,7 +86,7 @@ function getTap(redisclient, io) {
 
 // Hook up the pixelwall_tap event as well as update the client with 
 // the latest state on connection
-function onConnection(redisclient, io, fn) {
+pixelwall.onConnection = function (redisclient, io, fn) {
     var tap = getTap(redisclient, io);
     var connection = function (socket) {
             socket.on('pixelwall_tap', tap);       
@@ -99,9 +101,8 @@ function onConnection(redisclient, io, fn) {
     return connection;
 }
 
+return pixelwall;
 
+};
 
-exports.initialize = initialize;
-exports.getContext = getContext;
-exports.onConnection = onConnection;
-
+exports.Pixelwall = Pixelwall;
