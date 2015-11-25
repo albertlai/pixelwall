@@ -43,7 +43,7 @@ d_m = d_m * 100 / height;
 var h = w * 100 / height; 
 
 // Colors
-var dim = "#A4A49F";
+var dim = "#CCCCCC";
 var light = "#FFD659";
 
 pixelwall.getContext = function () {
